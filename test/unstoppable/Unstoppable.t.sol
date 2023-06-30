@@ -73,7 +73,6 @@ contract UnstoppableTest is Test {
         /* */
         vm.expectRevert();
         validation();
-        console.log(unicode"\n🎉 Congratulations, pass all tests! 🎉");
     }
 
     function validation() internal{
