@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../Util.sol";
 import "../../src/DamnValuableToken.sol";
 import "../../src/truster/TrusterLenderPool.sol";
+import "./Attacker.sol";
 
 contract TrusterTest is Test{
     uint256 internal constant TOKENS_IN_POOL = 1_000_000e18;
@@ -23,21 +24,25 @@ contract TrusterTest is Test{
         vm.startPrank(deployer);
         token = new DamnValuableToken();
         pool = new TrusterLenderPool(token);
+        
+        token.transfer(address(pool), TOKENS_IN_POOL);
+        assertEq(token.balanceOf(address(pool)), TOKENS_IN_POOL);
+        assertEq(token.balanceOf(address(player)), 0);
         vm.stopPrank();
-
-        vm.deal(address(pool), TOKENS_IN_POOL);
-        assertEq(address(pool).balance, TOKENS_IN_POOL);
-        assertEq(address(player).balance, 0);
     }
 
     function testExploit() public{
         /** CODE YOUR SOLUTION HERE */
         /* */
+        vm.startPrank(player);
+        console.log("start attack");
+        new Attacker(address(pool), address(token));
+        vm.stopPrank();
         validation();
     }
 
     function validation() internal{
-        assertEq(address(player).balance, TOKENS_IN_POOL);
-        assertEq(address(pool).balance, 0);
+        assertEq(token.balanceOf(address(player)), TOKENS_IN_POOL);
+        assertEq(token.balanceOf(address(pool)), 0);
     }
 }
