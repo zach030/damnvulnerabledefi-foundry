@@ -5,7 +5,7 @@ import "solady/src/utils/FixedPointMathLib.sol";
 import "solady/src/utils/SafeTransferLib.sol";
 import { RewardToken } from "./RewardToken.sol";
 import { AccountingToken } from "./AccountingToken.sol";
-
+import "forge-std/console.sol";
 /**
  * @title TheRewarderPool
  * @author Damn Vulnerable DeFi (https://damnvulnerabledefi.xyz)

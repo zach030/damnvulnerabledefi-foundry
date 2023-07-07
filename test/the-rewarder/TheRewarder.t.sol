@@ -5,11 +5,14 @@ import "forge-std/Test.sol";
 import "../Util.sol";
 import "../../src/DamnValuableToken.sol";
 import "../../src/the-rewarder/FlashLoanerPool.sol";
-import {TheRewarderPool, RewardToken, AccountingToken} from "../../src/the-rewarder/TheRewarderPool.sol";
+import {TheRewarderPool, RewardToken, AccountingToken, FixedPointMathLib} from "../../src/the-rewarder/TheRewarderPool.sol";
+import "./Attacker.sol";
 
 contract TheRewarderTest is Test{
+    using FixedPointMathLib for uint256;
     uint256 constant TOKENS_IN_LENDER_POOL = 1_000_000e18;
     Util util = new Util();
+    address payable[] internal users;
     address payable internal deployer;
     address payable internal alice;
     address payable internal bob;
@@ -24,7 +27,7 @@ contract TheRewarderTest is Test{
     FlashLoanerPool flashLoanPool;
 
     function setUp() public{
-        address payable[] memory users = util.createUsers(6);
+        users = util.createUsers(4);
         
         alice = users[0];
         bob = users[1];
@@ -61,15 +64,54 @@ contract TheRewarderTest is Test{
             assertEq(accountingToken.balanceOf(users[i]), depositAmount);
             vm.stopPrank();
         }
+
+        // advance block timestap
+        vm.warp(block.timestamp + 5 days);
+
+        uint256 rewardInRound = rewarderPool.REWARDS();
+        for (uint256 i=0; i<users.length; i++){
+            vm.startPrank(users[i]);
+            rewarderPool.distributeRewards();
+            assertEq(rewardToken.balanceOf(users[i]), rewardInRound.rawDiv(users.length));
+            vm.stopPrank();
+        }
+        assertEq(rewardToken.totalSupply(), rewardInRound);
+        assertEq(liquidityToken.balanceOf(address(player)),0);
+        assertEq(rewarderPool.roundNumber(),2);
     }
 
     function testExploit() public{
         /** CODE YOUR SOLUTION HERE */
-
+        vm.startPrank(player);
+        vm.warp(block.timestamp + 5 days);
+        Attacker attacker = new Attacker(address(flashLoanPool), address(rewarderPool), address(liquidityToken), address(rewardToken));
+        attacker.attack(TOKENS_IN_LENDER_POOL);
+        vm.stopPrank();
         validation();
     }
 
     function validation() public{
+        assertEq(rewarderPool.roundNumber(),3);
+        for (uint256 i=0; i< users.length; i++){
+            vm.startPrank(users[i]);
+            rewarderPool.distributeRewards();
+            uint256 userReward = rewardToken.balanceOf(users[i]);
+            uint256 userDelta = userReward.rawSub(rewarderPool.REWARDS().rawDiv(users.length));
+            assertTrue(userDelta < 1e16);
+            vm.stopPrank();
+        }
 
+        // rewards must have been issued to the player account
+        assertGt(rewardToken.totalSupply(), rewarderPool.REWARDS());
+        uint256 playerRewards = rewardToken.balanceOf(address(player));
+        assertGt(playerRewards, 0);
+
+        // the amount of rewards earned should be close to total available amount
+        uint256 delta = rewarderPool.REWARDS().rawSub(playerRewards);
+        assertLt(delta, 1e17);
+
+        // balance of dvt tokens is player and lending pool hasn't changed
+        assertEq(liquidityToken.balanceOf(address(player)), 0);
+        assertEq(liquidityToken.balanceOf(address(flashLoanPool)), TOKENS_IN_LENDER_POOL);
     }
 }
