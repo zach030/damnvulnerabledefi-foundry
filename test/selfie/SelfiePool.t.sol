@@ -30,9 +30,6 @@ contract SimplePoolTest is Test{
 
         pool = new SelfiePool(address(token), address(governance));
 
-        // assertEq(pool.token(), address(token));
-        // assertEq(pool.governance(), address(governance));
-
         token.transfer(address(pool), TOKENS_IN_POOL);
         token.snapshot();
         assertEq(token.balanceOf(address(pool)), TOKENS_IN_POOL);
