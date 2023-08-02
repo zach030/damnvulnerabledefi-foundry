@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.0;
+pragma solidity ^0.8.17;
 
-import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
-import "@uniswap/v2-periphery/contracts/libraries/SafeMath.sol";
+import {UniswapV2Library} from "./UniswapV2Library.sol";
+import {SafeMath} from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
 
 interface IERC20 {
     function transfer(address to, uint256 amount) external returns (bool);
