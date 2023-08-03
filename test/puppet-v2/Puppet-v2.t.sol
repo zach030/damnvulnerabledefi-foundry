@@ -2,10 +2,10 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import "../../src/build-uniswap/v2/UniswapV2Pair.json";
 import {WETH} from "solmate/tokens/WETH.sol";
 import {IUniswapV2Router02, IUniswapV2Factory, IUniswapV2Pair} from "../../src/puppet-v2/Interface.sol";
 import {PuppetV2Pool} from "../../src/puppet-v2/PuppetV2Pool.sol";
+import {DamnValuableToken} from "../../src/DamnValuableToken.sol";
 
 contract PuppetV2Test is Test{
     uint256 constant UNISWAP_INITIAL_TOKEN_RESERVE = 100e18;
@@ -29,34 +29,31 @@ contract PuppetV2Test is Test{
         vm.deal(player, PLAYER_INITIAL_ETH_BALANCE);
         assertEq(player.balance, PLAYER_INITIAL_ETH_BALANCE);
 
-        vm.startPrank(deployer);
         weth = new WETH();
         token = new DamnValuableToken();
         // Deploy Uniswap Factory and Router
         uniswapV2Factory = IUniswapV2Factory(
             deployCode(
-                "../../src/build-uniswap/v2/UniswapV2Factory.json", abi.encode(address(0))
+                "./src/build-uniswap/v2/UniswapV2Factory.json", abi.encode(address(0))
             )
         );
         uniswapV2Router = IUniswapV2Router02(
             deployCode(
-                "../../src/build-uniswap/v2/UniswapV2Router02.json", abi.encode(address(uniswapV2Factory), address(weth))
+                "./src/build-uniswap/v2/UniswapV2Router02.json", abi.encode(address(uniswapV2Factory), address(weth))
             )
         );
-        uniswapV2Pair = IUniswapV2Pair(uniswapV2Factory.getPair(address(dvt), address(weth)));
-        vm.stopPrank();
+        uniswapV2Pair = IUniswapV2Pair(uniswapV2Factory.getPair(address(token), address(weth)));
 
         token.approve(address(uniswapV2Router), UNISWAP_INITIAL_TOKEN_RESERVE);
         
-        uniswapV2Router.addLiquidityETH(
+        uniswapV2Router.addLiquidityETH{value: UNISWAP_INITIAL_WETH_RESERVE}(
             address(token),
             UNISWAP_INITIAL_TOKEN_RESERVE,                              // amountTokenDesired
             0,                                                          // amountETHMin
-            deployer.address,                                           // to
+            0,                                                          // amountETHMin
+            address(deployer),                                           // to
             block.timestamp * 2                                        // deadline
-        ){value: UNISWAP_INITIAL_WETH_RESERVE};
-
-        uniswapV2Pair = uniswapV2Factory.getPair(address(token), address(weth));
+        );
         
         pool = new PuppetV2Pool(
             address(weth),
@@ -65,19 +62,20 @@ contract PuppetV2Test is Test{
             address(uniswapV2Factory)
         );
 
-        token.transfer(player.address, PLAYER_INITIAL_TOKEN_BALANCE);
-        token.transfer(pool.address, POOL_INITIAL_TOKEN_BALANCE);
+        token.transfer(player, PLAYER_INITIAL_TOKEN_BALANCE);
+        token.transfer(address(pool), POOL_INITIAL_TOKEN_BALANCE);
 
         assertEq(pool.calculateDepositOfWETHRequired(1e18), 3e17);
         assertEq(pool.calculateDepositOfWETHRequired(POOL_INITIAL_TOKEN_BALANCE), 300_000e18);
     }
 
     function testExploit() public {
-
+        /*Code your solution here*/
+        validation();
     }
 
     function validation() internal {
-        assertEq(token.balanceOf(pool), 0);
-        assertGte(token.balanceOf(player), POOL_INITIAL_TOKEN_BALANCE);
+        assertEq(token.balanceOf(address(pool)), 0);
+        assertGt(token.balanceOf(player), POOL_INITIAL_TOKEN_BALANCE);
     }
 }
