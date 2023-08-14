@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import {WETH} from "solmate/tokens/WETH.sol";
-import {IUniswapV2Router02, IUniswapV2Factory, IUniswapV2Pair} from "../../src/puppet-v2/Interface.sol";
+import {IUniswapV2Router02, IUniswapV2Factory, IUniswapV2Pair} from "../../src/uniswap/Interface.sol";
 import {PuppetV2Pool} from "../../src/puppet-v2/PuppetV2Pool.sol";
 import {DamnValuableToken} from "../../src/DamnValuableToken.sol";
 

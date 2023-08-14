@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {UniswapV2Library} from "./UniswapV2Library.sol";
+import {UniswapV2Library} from "../uniswap/UniswapV2Library.sol";
 import {SafeMath} from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
 
 interface IERC20 {
